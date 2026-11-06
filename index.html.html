@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Cloud Phone Dashboard</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin:0; font-family:Arial,sans-serif; background:#101827; color:#eef2ff; padding:18px; }
+    .wrap { max-width:900px; margin:auto; }
+    h1 { font-size:25px; margin:8px 0; }
+    p { color:#aebbd0; }
+    .panel { background:#1b2638; padding:16px; border-radius:14px; margin:16px 0; }
+    input { width:100%; padding:12px; border-radius:8px; border:1px solid #43516a; background:#0f1725; color:white; font-size:16px; }
+    button { border:0; border-radius:8px; padding:10px 14px; font-weight:bold; cursor:pointer; margin:5px 5px 5px 0; }
+    .primary { background:#4f8cff; color:white; }
+    .start { background:#16865b; color:white; }
+    .stop { background:#b94a54; color:white; }
+    .device { border:1px solid #344258; border-radius:10px; padding:12px; margin:10px 0; display:flex; justify-content:space-between; gap:12px; align-items:center; flex-wrap:wrap; }
+    .status { font-size:13px; color:#b9c6d9; }
+    #message { white-space:pre-wrap; color:#ffd27d; margin-top:10px; }
+    small { color:#aebbd0; }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Cloud Phone Dashboard</h1>
+  <p>Giao diện quản lý thử nghiệm 20 thiết bị API.</p>
+  <div class="panel">
+    <label for="apiUrl">API Server URL</label>
+    <input id="apiUrl" value="https://cloud-phone-backend-2.onrender.com" placeholder="https://your-backend.onrender.com">
+    <button class="primary" onclick="loadDevices()">Kết nối / Tải thiết bị</button>
+    <div id="message">Chưa kết nối.</div>
+  </div>
+  <div class="panel">
+    <h2>Danh sách thiết bị</h2>
+    <div id="devices">Nhấn “Kết nối / Tải thiết bị”.</div>
+  </div>
+  <p><small>Lưu ý: API hiện chỉ mô phỏng trạng thái thiết bị. Chưa có Android Cloud Phone thật; Start/Stop không khởi chạy Android hoặc game.</small></p>
+</div>
+<script>
+function baseUrl() {
+  return document.getElementById('apiUrl').value.trim().replace(/\/+$/, '');
+}
+function message(text) {
+  document.getElementById('message').textContent = text;
+}
+async function loadDevices() {
+  const url = baseUrl();
+  if (!url) { message('Vui lòng nhập URL backend.'); return; }
+  message('Đang kết nối...');
+  try {
+    const res = await fetch(url + '/api/devices');
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const devices = await res.json();
+    renderDevices(devices);
+    message('Kết nối thành công: ' + devices.length + ' thiết bị (mô phỏng).');
+  } catch (e) {
+    message('Không kết nối được: ' + e.message + '\nKiểm tra backend, CORS và URL.');
+  }
+}
+function renderDevices(devices) {
+  const container = document.getElementById('devices');
+  container.innerHTML = '';
+  devices.forEach(device => {
+    const item = document.createElement('div');
+    item.className = 'device';
+    const info = document.createElement('div');
+    const title = document.createElement('strong');
+    title.textContent = device.name || ('Android ' + device.id);
+    const status = document.createElement('div');
+    status.className = 'status';
+    status.textContent = 'ID: ' + device.id + ' · Trạng thái: ' + device.status;
+    info.append(title, status);
+    const actions = document.createElement('div');
+    const start = document.createElement('button');
+    start.className = 'start';
+    start.textContent = 'Start';
+    start.onclick = () => deviceAction(device.id, 'start');
+    const stop = document.createElement('button');
+    stop.className = 'stop';
+    stop.textContent = 'Stop';
+    stop.onclick = () => deviceAction(device.id, 'stop');
+    actions.append(start, stop);
+    item.append(info, actions);
+    container.append(item);
+  });
+}
+async function deviceAction(id, action) {
+  try {
+    const res = await fetch(baseUrl() + '/api/devices/' + id + '/' + action, { method: 'POST' });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    message('Đã gửi lệnh ' + action + ' cho thiết bị ' + id + ' (mô phỏng).');
+    await loadDevices();
+  } catch (e) {
+    message('Gửi lệnh thất bại: ' + e.message);
+  }
+}
+</script>
+</body>
+</html>
